@@ -1,4 +1,13 @@
 import gurobipy as gp
+import pandas as pd
+from math import *
+
+ALLOW_EP = True
+EPSILON = 0.0001
+
+
+def rotate( locations, theta ):
+    return [ [ cos( theta ) * x - sin( theta ) * y, sin( theta ) * x + cos( theta ) * y ] for [ x, y ] in locations ]
 
 
 class Location:
@@ -22,6 +31,9 @@ def find_set( locations, distance ):
     xList = sorted( set( [ l[ 0 ] for l in locations ] ) )
     for startX in xList:
         endX = startX + 2*distance
+        if ALLOW_EP == True:
+            startX = startX - EPSILON
+            endX = endX + EPSILON
         tempLocList = []
         for loc in locationList:
             if startX <= loc.x <= endX:
@@ -31,6 +43,9 @@ def find_set( locations, distance ):
 
         for startY in tempYList:
             endY = startY + 2*distance
+            if ALLOW_EP == True:
+                startY = startY - EPSILON
+                endY = endY + EPSILON
             inBlockSet = set()
 
             for loc in locationList:
@@ -81,13 +96,25 @@ def solve( locations, distance ):
     facilities = []
     for i in range( len( c ) ):
         if c[ i ].x == 1:
-            facilities.append( ( setCenterLocations[ i ][ 0 ], setCenterLocations[ i ][ 1 ] ) )
+            facilities.append( [ setCenterLocations[ i ][ 0 ], setCenterLocations[ i ][ 1 ] ] )
 
     return facilities
 
 
 def debug() -> None:
-    locations = [ [ 3, 2 ], [ 5, 6 ], [ 6, 5 ], [ 6, 7 ], [ 7, 6 ], [ 9, 10 ] ]
-    distance = 4
-    print( solve( locations, distance ) )
+    df = pd.read_csv(
+        'C:\\PuSung\\University\\Sophomore\\110-2 Academic\\OR\\2022_Spring_OR_Final\\simple\\data\\006.csv' )
+    x = df[ 'x' ]
+    y = df[ 'y' ]
+    distance = df[ 'distance' ][ 0 ]
+    locations = []
+    for i in range( len( x ) ):
+        locations.append( [ x[ i ], y[ i ] ] )
+    print( rotate( locations, pi / 4 ) )
+    input()
+    print( solve( rotate( locations, pi / 4 ), distance / sqrt( 2 ) ) )
     return
+
+
+if __name__ == '__main__':
+    debug()
