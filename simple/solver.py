@@ -1,120 +1,74 @@
-import gurobipy as gp
-import pandas as pd
-from math import *
+def solve(locations, distance):
+    import gurobipy as gp
+    model = gp.Model()
 
-ALLOW_EP = True
-EPSILON = 0.0001
+    # print(locations, distance)
 
+    B = range(len(locations))
+    d = distance
+    M = 10000000.0
+    x = [l[0] for l in locations]
+    y = [l[1] for l in locations]
 
-def rotate( locations, theta ):
-    return [ [ cos( theta ) * x - sin( theta ) * y, sin( theta ) * x + cos( theta ) * y ] for [ x, y ] in locations ]
+    x_range = max(x) - min(x)
+    x_min, x_max = min(x) - x_range, max(x) + x_range
+    y_range = max(y) - min(y)
+    y_min, y_max = min(y) - y_range, max(y) + y_range
 
+    a = [model.addVar(x_min, x_max, 0.0, gp.GRB.CONTINUOUS) for i in B]
+    b = [model.addVar(y_min, y_max, 0.0, gp.GRB.CONTINUOUS) for i in B]
+    s = [[model.addVar(0.0, 1.0, 0.0, gp.GRB.BINARY) for j in B] for i in B]
+    u = [model.addVar(0.0, 1.0, 0.0, gp.GRB.BINARY) for i in B]
 
-class Location:
+    for i in B:
+        model.addConstr(sum(s[i]) >= 1)
 
-    def __init__( self, id: int, x: float, y: float ) -> None:
-        self.id = id
-        self.x = x
-        self.y = y
+    for i in B:
+        for j in B:
+            model.addConstr(x[i] - d - a[j] <= M * (1 - s[i][j]))
+            model.addConstr(a[j] - x[i] - d <= M * (1 - s[i][j]))
+            model.addConstr(y[i] - d - b[j] <= M * (1 - s[i][j]))
+            model.addConstr(b[j] - y[i] - d <= M * (1 - s[i][j]))
 
-    def __str__( self ) -> str:
-        return f'id: {self.id}, ( {self.x}, {self.y} )'
+    for j in B:
+        model.addConstr(sum([s[i][j] for i in B]) <= M * u[j])
 
+    model.setObjective(sum(u), gp.GRB.MINIMIZE)
+    model.optimize()
 
-def find_set( locations, distance ):
-    listOfSets = list()
-    setCenterLocations = list()
-    locationList = []
-    for i in range( len( locations ) ):
-        locationList.append( Location( i, locations[ i ][ 0 ], locations[ i ][ 1 ] ) )
+    min_facility_cnt = model.getObjective().getValue()
+    # print("min facility count:", min_facility_cnt)
+    # for i in B:
+    #     for j in B:
+    #         print(s[i][j].X, end=' ')
+    #     print()
+    # facilities = []
+    # for i in B:
+    #     print(u[j].X, end=' ')
+    # print()
 
-    xList = sorted( set( [ l[ 0 ] for l in locations ] ) )
-    for startX in xList:
-        endX = startX + 2*distance
-        if ALLOW_EP == True:
-            startX = startX - EPSILON
-            endX = endX + EPSILON
-        tempLocList = []
-        for loc in locationList:
-            if startX <= loc.x <= endX:
-                tempLocList.append( loc )
-
-        tempYList = sorted( set( [ loc.y for loc in tempLocList ] ) )
-
-        for startY in tempYList:
-            endY = startY + 2*distance
-            if ALLOW_EP == True:
-                startY = startY - EPSILON
-                endY = endY + EPSILON
-            inBlockSet = set()
-
-            for loc in locationList:
-                if ( startX <= loc.x <= endX ) and ( startY <= loc.y <= endY ):
-                    inBlockSet.add( loc )
-
-            if tuple( inBlockSet ) not in listOfSets:
-                listOfSets.append( tuple( inBlockSet ) )
-                centerX = ( ( startX+endX ) ) / 2
-                centerY = ( ( startY+endY ) ) / 2
-                setCenterLocations.append( ( centerX, centerY ) )
-
-    return listOfSets, setCenterLocations, locationList
-
-
-def solve( locations, distance ):
-
-    listOfSets, setCenterLocations, locationList = list( find_set( locations, distance ) )
-
-    # Model
-    sc_model = gp.Model()
-
-    # Sets
-    S = range( len( listOfSets ) )
-    L = range( len( locations ) )
-
-    # Parameters
-    w = []
-    for l in L:
-        w.append( [] )
-        for s in S:
-            w[ l ].append( int( locationList[ l ] in listOfSets[ s ] ) )
-
-    # Decision variables
-    c = [ sc_model.addVar( vtype=gp.GRB.BINARY ) for s in S ]
-
-    # Objective function
-    sc_model.setObjective( sum( c ), gp.GRB.MINIMIZE )
-
-    # Constraints
-    for l in L:
-        sc_model.addConstr( gp.quicksum( w[ l ][ s ] * c[ s ] for s in S ) >= 1 )
-
-    # optimize
-    sc_model.optimize()
-
-    # result
     facilities = []
-    for i in range( len( c ) ):
-        if c[ i ].x == 1:
-            facilities.append( [ setCenterLocations[ i ][ 0 ], setCenterLocations[ i ][ 1 ] ] )
-
+    for j in B:
+        if u[j].X:
+            facilities.append([a[j].X, b[j].X])
+            # print(a[j].X, b[j].X)
     return facilities
 
+def preprocess(path):
+    import csv
+    fp = open(path, 'r', newline = '')
+    header = fp.readline()
+    reader = csv.reader(fp, delimiter = ',') 
+    all_data = [[row[i] for i in range(6)] for row in reader]
+    return all_data, [[float(row[2]), float(row[3])] for row in all_data], float(all_data[0][5])
 
-def debug() -> None:
-    df = pd.read_csv(
-        'C:\\PuSung\\University\\Sophomore\\110-2 Academic\\OR\\2022_Spring_OR_Final\\simple\\data\\006.csv' )
-    x = df[ 'x' ]
-    y = df[ 'y' ]
-    distance = df[ 'distance' ][ 0 ]
-    locations = []
-    for i in range( len( x ) ):
-        locations.append( [ x[ i ], y[ i ] ] )
-    print( rotate( locations, pi / 4 ) )
-    input()
-    print( solve( rotate( locations, pi / 4 ), distance / sqrt( 2 ) ) )
-    return
+from math import *
 
+def rotate(locations, theta):
+    return [[cos(theta) * x - sin(theta) * y, sin(theta) * x + cos(theta) * y] for [x, y] in locations]
 
 if __name__ == '__main__':
-    debug()
+    import sys
+    path = sys.argv[1]
+    all_data, locations, distance = preprocess(path)
+    solve(rotate(locations, pi / 4), distance / (2 ** 1/2))
