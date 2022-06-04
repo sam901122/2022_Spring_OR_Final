@@ -54,8 +54,14 @@ def find_set( locations, distance ):
 
             if tuple( inBlockSet ) not in listOfSets:
                 listOfSets.append( tuple( inBlockSet ) )
-                centerX = ( ( startX+endX ) ) / 2
-                centerY = ( ( startY+endY ) ) / 2
+
+                xMax = max( inBlockSet, key=lambda loc: loc.x ).x
+                xMin = min( inBlockSet, key=lambda loc: loc.x ).x
+                yMax = max( inBlockSet, key=lambda loc: loc.y ).y
+                yMin = min( inBlockSet, key=lambda loc: loc.y ).y
+
+                centerX = ( xMax+xMin ) / 2
+                centerY = ( yMax+yMin ) / 2
                 setCenterLocations.append( ( centerX, centerY ) )
 
     return listOfSets, setCenterLocations, locationList
@@ -110,8 +116,6 @@ def debug() -> None:
     locations = []
     for i in range( len( x ) ):
         locations.append( [ x[ i ], y[ i ] ] )
-    print( rotate( locations, pi / 4 ) )
-    input()
     print( solve( rotate( locations, pi / 4 ), distance / sqrt( 2 ) ) )
     return
 
