@@ -1,7 +1,11 @@
 from math import *
+from tokenize import group
+from turtle import xcor
 import pandas as pd
 import numpy as np
 from solver import solve
+
+w = [ 1, 50, 1 ]
 
 
 def preprocess( path ):
@@ -44,6 +48,9 @@ def match( c_all, c_loc, c_weight, t_loc, dist ):
 
 def evaluate( c_all, t_all, distance, facilities, groups, uncovered ):
     eps = 0.001
+    XCor = []
+    YCor = []
+    belong = [ 0 ] * len( facilities )
 
     def dist( x1, y1, x2, y2 ):
         return abs( x1 - x2 ) + abs( y1 - y2 )
@@ -67,6 +74,8 @@ def evaluate( c_all, t_all, distance, facilities, groups, uncovered ):
     print( "stations:" )
     for i in range( len( facilities ) ):
         print( "{}\t({},\t{})".format( i + 1, round( facilities[ i ][ 0 ], 5 ), round( facilities[ i ][ 1 ], 5 ) ) )
+        XCor.append( round( facilities[ i ][ 0 ], 5 ) )
+        YCor.append( round( facilities[ i ][ 1 ], 5 ) )
 
     print( "groups:" )
     for j in range( len( t_loc ) ):
@@ -74,6 +83,7 @@ def evaluate( c_all, t_all, distance, facilities, groups, uncovered ):
         for k in groups[ j ]:
             print( "\tstation {}\t({},\t{})".format( k + 1, round( facilities[ k ][ 0 ], 5 ),
                                                      round( facilities[ k ][ 1 ], 5 ) ) )
+            belong[ k ] = j
 
     print( "uncovered:" )
     for i in range( len( c_loc ) ):
@@ -83,6 +93,9 @@ def evaluate( c_all, t_all, distance, facilities, groups, uncovered ):
     print( "number of stations:", len( facilities ) )
     print( "average distance: {}".format( sum( r ) / len( t_loc ) ) )
     print( "uncovered: {}".format( uncovered ) )
+
+    write_df = pd.DataFrame( { 'id': range( len( facilities ) ), 'X': XCor, 'Y': YCor, 'group': belong } )
+    write_df.to_csv( f'({w[0], w[1], w[2]})_out.csv', index=False )
 
     return max_dist, avg_dist, max_dist <= distance + eps
 
@@ -98,7 +111,7 @@ if __name__ == "__main__":
     t_loc = rotate( t_loc, pi / 4 )
 
     # facilities, groups, uncovered = solve(c_loc, c_weight, t_loc, t_weight, dist / sqrt(2))
-    facilities, groups, uncovered = solve( c_loc, c_weight, t_loc, t_weight, dist / sqrt( 2 ) )
+    facilities, groups, uncovered = solve( c_loc, c_weight, t_loc, t_weight, dist / sqrt( 2 ), w )
     facilities = rotate( facilities, -pi / 4 )
 
     evaluate( c_all, t_all, dist, facilities, groups, uncovered )
