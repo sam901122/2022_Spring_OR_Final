@@ -76,7 +76,12 @@ def evaluate(c_all, t_all, distance, facilities, groups, uncovered):
     for j in range(len(t_loc)):
         print("group {} ({}):".format(j + 1, t_all[j][1]))
         for k in groups[j]:
-            print("\tstation {}\t({},\t{})".format(k + 1, round(facilities[i][0], 5), round(facilities[i][1], 5)))
+            print("\tstation {}\t({},\t{})".format(k + 1, round(facilities[k][0], 5), round(facilities[k][1], 5)))
+
+    print("uncovered:")
+    for i in range(len(c_loc)):
+	    if all_dists[i] > distance - eps:
+		    print("location {} ({}):".format(i + 1, c_all[i][1]))
 
     print("number of stations:", len(facilities))
     print("average distance: {}".format(sum(r) / len(t_loc)))
