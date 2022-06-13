@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 from solver import solve
 
-w = [ 1, 50, 1 ]
+w = [ 1, 1, 1 ]
 
 
 def preprocess( path ):
